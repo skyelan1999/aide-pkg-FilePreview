@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-bookworm@sha256:62ed8e07e544e8555c5d93748d5275015136b7f5c52b5e8679b4de339c3779d3
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc libreoffice-impress chromium fonts-noto-cjk fonts-liberation && rm -rf /var/lib/apt/lists/*
 COPY engine/requirements.txt /opt/file-preview/requirements.txt
 RUN pip install --no-cache-dir -r /opt/file-preview/requirements.txt

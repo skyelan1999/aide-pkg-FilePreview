@@ -42,7 +42,7 @@ docker compose -f engine/compose.yaml stop
 
 Example request to Aide: “Use File Preview to inspect pages 1 and 2 of docs/report.pdf. Check clipping and table alignment; identify pages/regions, and do not claim unreturned pages were reviewed.”
 
-AI image delivery requires an Aide build supporting **plugin-tool-images-v1** and a configured vision model. Old hosts can display workbench pictures but their text-only tool normalization does not deliver images to AI. The marketplace capability gate rejects unsupported hosts. The companion Aide PR supplies this generic contract; installing this ZIP alone does not patch the host. A pure text model must produce a clear capability error, never a fabricated visual review. Input images may be sent to the user's selected model provider under normal Aide rules; rendering itself stays local.
+AI image delivery requires an Aide build supporting **plugin-tool-images-v1** and a configured vision model. Old hosts can display workbench pictures but their text-only tool normalization does not deliver images to AI. The marketplace capability gate rejects unsupported hosts. The companion Aide PR supplies this generic contract; installing this ZIP alone does not patch the host. A pure text model must produce a clear capability error, never a fabricated visual review. Input images may be sent to the user's selected model provider under normal Aide rules; rendering itself stays local. Normal Aide provider-request diagnostics may retain request bodies, including images; image payloads are excluded from ordinary text tool records and serialized message fields.
 
 ## Fidelity and coverage
 

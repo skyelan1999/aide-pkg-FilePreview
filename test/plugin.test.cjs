@@ -78,3 +78,14 @@ test("renders authorized snapshot bytes, returns fingerprint, rejects revocation
     a.operation === "sources" ? {} : { workspace: root, path: "../outside" };
   await assert.rejects(plugin._test.render({ path: "doc.pdf" }, api, settings));
 });
+
+test("local renderer contract refuses public remote endpoints before sending data", () => {
+  assert.throws(
+    () =>
+      plugin._test.rpc(
+        { engineURL: "https://example.com", engineToken: "x".repeat(40) },
+        "/health",
+      ),
+    /local backend/,
+  );
+});

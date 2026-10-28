@@ -14,6 +14,16 @@ function rpc(settings, route, body) {
       ""
     ) + route
   );
+  if (![
+    "127.0.0.1",
+    "localhost",
+    "[::1]",
+    "host.docker.internal",
+    "aide-file-preview-gateway-1"
+  ].includes(url.hostname))
+    throw Error(
+      "Renderer must be on the local backend host or the documented Docker gateway"
+    );
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash)
     throw Error("Invalid renderer URL");
   if (!/^[A-Za-z0-9_-]{32,128}$/.test(settings.engineToken || ""))

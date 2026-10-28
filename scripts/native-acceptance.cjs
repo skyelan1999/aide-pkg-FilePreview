@@ -71,7 +71,11 @@ function request(route, method = "GET", value, headers = {}) {
   });
 }
 async function open() {
-  const r = await request("/api/plugins/file-preview/workbench/open", "POST", {});
+  const r = await request(
+    "/api/plugins/file-preview/workbench/open",
+    "POST",
+    {},
+  );
   assert.equal(r.status, 200, JSON.stringify(r.value));
   const page = await request(r.value.url);
   assert.equal(page.status, 200);
@@ -80,7 +84,9 @@ async function open() {
 async function invoke(bridge, tool, args) {
   if (bridge.calls >= 90) {
     const r = await request(
-      "/api/plugins/file-preview/workbench/" + bridge.bridge.instanceId + "/renew",
+      "/api/plugins/file-preview/workbench/" +
+        bridge.bridge.instanceId +
+        "/renew",
       "POST",
       {},
     );
@@ -127,28 +133,256 @@ async function install() {
     "Content-Type": "multipart/form-data; boundary=" + b,
   });
   assert.ok([200, 201].includes(r.status), JSON.stringify(r.value));
-  const engineToken=fs.readFileSync('.file-preview-engine.env','utf8').trim().split('=')[1];
-  const configured=await request('/api/plugins/file-preview/settings','PUT',{settings:{engineURL:'http://host.docker.internal:18510',engineToken}});
-  assert.equal(configured.status,200,configured.value?.error);
+  const engineToken = fs
+    .readFileSync(".file-preview-engine.env", "utf8")
+    .trim()
+    .split("=")[1];
+  const configured = await request(
+    "/api/plugins/file-preview/settings",
+    "PUT",
+    {
+      settings: { engineURL: "http://host.docker.internal:18510", engineToken },
+    },
+  );
+  assert.equal(configured.status, 200, configured.value?.error);
   console.log("Native ZIP install/upgrade and isolated settings: PASS");
 }
 async function test() {
- const bridge=await open();const receipts=[];
- try{
-  const health=(await invoke(bridge,'file_preview_status',{})).result;
-  assert.equal(health.ok,true);assert.match(health.hostImageResults,/ready/);
-  for(const name of ['two-pages.pdf','sample.docx','sample.pptx','sample.xlsx','quadrants.png','sample.md','sample.html']){
-   const result=(await invoke(bridge,'file_preview_render',{fileSource:'workspace',path:name,pages:[1],dpi:120})).result;
-   assert.equal(result.source.sha256,crypto.createHash('sha256').update(fs.readFileSync('.agent-state/fixtures/'+name)).digest('hex'));
-   assert.equal(result.images.length,1);assert.equal(result.images[0].page,1);
-   assert.equal(crypto.createHash('sha256').update(Buffer.from(result.images[0].dataBase64,'base64')).digest('hex'),result.images[0].sha256);
-   receipts.push({name,totalPages:result.totalPages,hostSource:true,imageBytes:Buffer.from(result.images[0].dataBase64,'base64').length});
+  const bridge = await open();
+  const receipts = [];
+  try {
+    const health = (await invoke(bridge, "file_preview_status", {})).result;
+    assert.equal(health.ok, true);
+    assert.match(health.hostImageResults, /ready/);
+    for (const name of [
+      "two-pages.pdf",
+      "sample.docx",
+      "sample.pptx",
+      "sample.xlsx",
+      "quadrants.png",
+      "sample.md",
+      "sample.html",
+    ]) {
+      const result = (
+        await invoke(bridge, "file_preview_render", {
+          fileSource: "workspace",
+          path: name,
+          pages: [1],
+          dpi: 120,
+        })
+      ).result;
+      assert.equal(
+        result.source.sha256,
+        crypto
+          .createHash("sha256")
+          .update(fs.readFileSync(".agent-state/fixtures/" + name))
+          .digest("hex"),
+      );
+      assert.equal(result.images.length, 1);
+      assert.equal(result.images[0].page, 1);
+      assert.equal(
+        crypto
+          .createHash("sha256")
+          .update(Buffer.from(result.images[0].dataBase64, "base64"))
+          .digest("hex"),
+        result.images[0].sha256,
+      );
+      receipts.push({
+        name,
+        totalPages: result.totalPages,
+        hostSource: true,
+        imageBytes: Buffer.from(result.images[0].dataBase64, "base64").length,
+      });
+    }
+    const crop = (
+      await invoke(bridge, "file_preview_render", {
+        path: "two-pages.pdf",
+        pages: [2],
+        crop: { x: 0.5, y: 0, width: 0.5, height: 0.5 },
+        dpi: 180,
+      })
+    ).result;
+    assert.equal(crop.coverageComplete, false);
+    assert.equal(crop.images[0].crop.x, 0.5);
+    fs.writeFileSync(
+      root + "/acceptance.json",
+      JSON.stringify(
+        {
+          nativeInstall: "PASS",
+          sourceReads: "PASS",
+          formats: receipts,
+          crop: "PASS",
+          hostImageCapability: "PASS",
+          hostImage: inspect.Config.Image,
+          hostBinarySha256: cp
+            .execFileSync("docker", [
+              "exec",
+              container,
+              "sha256sum",
+              "/usr/local/bin/aide",
+            ])
+            .toString()
+            .trim()
+            .split(/\s+/)[0],
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      "Native installed plugin: seven formats, authorized source hashes, real image bytes and crop PASS",
+    );
+  } finally {
+    await request(
+      "/api/plugins/file-preview/workbench/" + bridge.bridge.instanceId,
+      "DELETE",
+    );
   }
-  const crop=(await invoke(bridge,'file_preview_render',{path:'two-pages.pdf',pages:[2],crop:{x:.5,y:0,width:.5,height:.5},dpi:180})).result;
-  assert.equal(crop.coverageComplete,false);assert.equal(crop.images[0].crop.x,.5);
-  fs.writeFileSync(root+'/acceptance.json',JSON.stringify({nativeInstall:'PASS',sourceReads:'PASS',formats:receipts,crop:'PASS',hostImageCapability:'PASS',hostImage:inspect.Config.Image,hostBinarySha256:crypto.createHash('sha256').update(cp.execFileSync('docker',['exec',container,'cat','/usr/local/bin/aide'],{maxBuffer:400*1024*1024})).digest('hex')},null,2));
-  console.log('Native installed plugin: seven formats, authorized source hashes, real image bytes and crop PASS');
- }finally{await request('/api/plugins/file-preview/workbench/'+bridge.bridge.instanceId,'DELETE')}
+}
+async function modelWire() {
+  let sent = false;
+  const received = [],
+    batches = [];
+  const b = await open();
+  const expected = (
+    await invoke(b, "file_preview_render", {
+      path: "sample.docx",
+      pages: [1, 2],
+    })
+  ).result.images
+    .map((i) => i.sha256)
+    .sort();
+  await request(
+    "/api/plugins/file-preview/workbench/" + b.bridge.instanceId,
+    "DELETE",
+  );
+  const provider = http.createServer(async (req, res) => {
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks));
+      let message = { role: "assistant", content: "Synthetic fixture title" };
+      if (body.tools?.length) {
+        if (!sent) {
+          sent = true;
+          message = {
+            role: "assistant",
+            content: "",
+            tool_calls: [
+              {
+                id: "render-controlled",
+                type: "function",
+                function: {
+                  name: "file_preview_render",
+                  arguments: JSON.stringify({
+                    path: "sample.docx",
+                    pages: [1, 2],
+                  }),
+                },
+              },
+            ],
+          };
+        } else {
+          const batch = [];
+          for (const m of body.messages || [])
+            for (const p of Array.isArray(m.content) ? m.content : []) {
+              if (p.type === "image_url") {
+                const url = p.image_url.url;
+                assert.match(url, /^data:image\/jpeg;base64,/);
+                const data = Buffer.from(url.split(",")[1], "base64");
+                const im = {
+                  sha256: crypto
+                    .createHash("sha256")
+                    .update(data)
+                    .digest("hex"),
+                  bytes: data.length,
+                };
+                received.push(im);
+                batch.push(im.sha256);
+              }
+            }
+          batches.push(batch);
+          message = {
+            role: "assistant",
+            content:
+              "Controlled provider received actual rendered pages. This verifies image transport, not semantic vision-model quality.",
+          };
+        }
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          choices: [
+            {
+              message,
+              finish_reason: message.tool_calls ? "tool_calls" : "stop",
+            },
+          ],
+        }),
+      );
+    } catch (e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+  });
+  await new Promise((r) => provider.listen(18512, "127.0.0.1", r));
+  try {
+    const configured = await request("/api/settings", "PUT", {
+      baseURL: "http://host.docker.internal:18512/v1",
+      model: "fixture-vision",
+      apiKey: "synthetic-fixture-only",
+      models: [{ id: "fixture-vision", vision: true }],
+      toolMaxRounds: 4,
+    });
+    assert.equal(configured.status, 200, configured.value?.error);
+    const session = await request("/api/sessions", "POST", {});
+    assert.equal(session.status, 201, session.value?.error);
+    const id = session.value.id;
+    const started = await request("/api/sessions/" + id + "/runs", "POST", {
+      mode: "chat",
+      prompt:
+        "Use file_preview_render to inspect sample.docx pages 1 and 2, then report only what the controlled provider verifies.",
+    });
+    assert.equal(started.status, 202, started.value?.error);
+    let task;
+    for (let i = 0; i < 160; i++) {
+      const r = await request("/api/sessions/" + id);
+      task = r.value.runs?.[0];
+      if (task && ["completed", "failed", "cancelled"].includes(task.status))
+        break;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    assert.equal(task?.status, "completed", task?.error);
+    assert.ok(batches.length >= 1, "No image-bearing request received");
+    for (const batch of batches)
+      assert.deepEqual(
+        batch.sort(),
+        expected,
+        "Each actual model request must contain exactly the two rendered raster hashes",
+      );
+    for (const u of task.toolUses || [])
+      assert.ok(
+        !u.result.includes("dataBase64"),
+        "Base64 leaked into text ledger",
+      );
+    const receipt = {
+      status: "PASS",
+      scope:
+        "Actual installed File Preview plugin -> real renderer -> real Aide task loop -> controlled local provider. No paid/live semantic model acceptance.",
+      requests: batches.length,
+      images: [...new Map(received.map((i) => [i.sha256, i])).values()],
+      sessionId: id,
+    };
+    fs.writeFileSync(
+      root + "/model-wire.json",
+      JSON.stringify(receipt, null, 2),
+    );
+    console.log(
+      "Actual installed plugin and renderer images reached controlled model endpoint: PASS (2 rasters)",
+    );
+  } finally {
+    provider.close();
+  }
 }
 async function serve() {
   let bridge;
@@ -218,6 +452,7 @@ async function serve() {
 (async () => {
   await install();
   await test();
+  if (process.argv.includes("--model-wire")) await modelWire();
   if (process.argv.includes("--serve")) await serve();
 })().catch((e) => {
   console.error(e);

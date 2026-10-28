@@ -2,7 +2,7 @@
 from pathlib import Path
 import zipfile,json,hashlib
 root=Path(__file__).resolve().parents[1]
-files=['manifest.json','index.js','viewer.html','LICENSE','README.md','THIRD_PARTY_NOTICES.md','docs/PRD.md','docs/ACCEPTANCE.md','engine/Dockerfile','engine/compose.yaml','engine/server.py','engine/gateway.py','engine/requirements.txt','engine/LICENSE','scripts/setup-engine.py']
+files=['manifest.json','index.js','viewer.html','LICENSE','README.md','THIRD_PARTY_NOTICES.md','docs/PRD.md','docs/ACCEPTANCE.md','docs/RELEASE-NOTES-0.1.0.md','engine/Dockerfile','engine/compose.yaml','engine/server.py','engine/gateway.py','engine/requirements.txt','engine/LICENSE','scripts/setup-engine.py']
 version=json.loads((root/'manifest.json').read_text())['version'];out=root/'dist';out.mkdir(exist_ok=True);target=out/f'file-preview-{version}-preview.zip'
 with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
  for f in files:

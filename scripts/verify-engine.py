@@ -16,6 +16,7 @@ for name in ['two-pages.pdf','sample.docx','sample.pptx','sample.xlsx','quadrant
  im=result['images'][0];raw=base64.b64decode(im['dataBase64']);assert hashlib.sha256(raw).hexdigest()==im['sha256'];assert im['width']>100 and im['height']>100
  (out/(name+'.jpg')).write_bytes(raw)
  if name in ['two-pages.pdf','sample.docx','sample.pptx']:assert result['totalPages']==2 and result['coverageComplete'] is False
+ if name=='sample.html':assert any('Blocked resource requests' in w for w in result['warnings'])
  receipts.append({'name':name,'totalPages':result['totalPages'],'renderer':result['renderer'],'imageBytes':len(raw),'warnings':result['warnings']})
  print(name, result['totalPages'], 'PASS')
 a={'name':'two-pages.pdf','dataBase64':base64.b64encode((root/'two-pages.pdf').read_bytes()).decode(),'pages':[2,1],'crop':{'x':.5,'y':0,'width':.5,'height':.5},'dpi':180};r=req('/render',a);assert r['pagesRead']==[2,1] and all(i['crop']==a['crop'] for i in r['images']);assert not r['coverageComplete']

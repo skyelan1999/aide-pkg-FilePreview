@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "main": "index.js",
   "author": "skyelan1999",
-  "license": "MIT",
+  "license": "MIT AND AGPL-3.0-or-later",
   "description": "后台只读渲染 PDF、Office、图片、Markdown 与 HTML，按页取图和局部放大，用于视觉复查。渲染引擎独立部署。",
   "workbench": {
     "protocol": 1,
