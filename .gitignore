@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.agent-state/
+.file-preview-engine.env
+__pycache__/

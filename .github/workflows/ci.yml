@@ -1,0 +1,38 @@
+name: File Preview CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        node: [18, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm test
+      - run: git diff --exit-code -- index.js viewer.html
+      - run: python3 scripts/package.py
+  renderer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install Pillow==11.3.0 python-docx==1.2.0 python-pptx==1.0.2 openpyxl==3.1.5
+      - run: python scripts/create-fixtures.py
+      - run: python scripts/setup-engine.py
+      - run: docker compose -f engine/compose.yaml up --build -d
+      - run: python scripts/verify-engine.py
+      - if: always()
+        run: docker compose -f engine/compose.yaml down

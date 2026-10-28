@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>File Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #121923;
+      --panel: #1b2634;
+      --line: #344355;
+      --text: #e4ecf3;
+      --muted: #a7b5c4;
+      --accent: #a8c6e5;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font:
+        14px system-ui,
+        sans-serif;
+    }
+    header {
+      position: sticky; top: 0; z-index: 10; background: var(--bg);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+    header strong {
+      font-size: 17px;
+    }
+    header small {
+      color: var(--muted);
+      margin-right: auto;
+    }
+    button,
+    select,
+    input {
+      font: inherit;
+      color: inherit;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+    button {
+      cursor: pointer;
+    }
+    button:hover {
+      border-color: var(--accent);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+    button.primary {
+      background: #355676;
+    }
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin: 14px 0 6px;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      min-height: calc(100vh - 70px);
+    }
+    aside {
+      position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 70px); overflow: auto;
+      padding: 18px;
+      border-right: 1px solid var(--line);
+    }
+    aside input,
+    aside select {
+      width: 100%;
+      min-width: 0;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 9px;
+    }
+    .row > * {
+      flex: 1;
+    }
+    .files {
+      max-height: 200px;
+      overflow: auto;
+      margin-top: 8px;
+    }
+    .files button {
+      text-align: left;
+      width: 100%;
+      margin: 3px 0;
+      overflow-wrap: anywhere;
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    #stage {
+      padding: 24px;
+      min-width: 0;
+    }
+    #intro {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 750px;
+    }
+    h1 {
+      font-size: 23px;
+      margin-top: 0;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    #status {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.6;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    #metadata {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .pages {
+      display: grid;
+      gap: 24px;
+      margin-top: 20px;
+    }
+    figure {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 12px;
+    }
+    figure img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: auto;
+      background: white;
+    }
+    figcaption {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 0;
+      overflow-wrap: anywhere;
+    }
+    dialog {
+      color: inherit;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 760px;
+      width: calc(100% - 30px);
+      max-height: 90vh;
+      overflow: auto;
+    }
+    dialog::backdrop {
+      background: #0009;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: var(--bg);
+      padding: 14px;
+      border-radius: 8px;
+    }
+    dialog p {
+      line-height: 1.7;
+    }
+    .error {
+      color: #ffbcaf !important;
+    }
+    @media (max-width: 700px) {
+      aside { position: static; max-height: none; }
+      main {
+        display: block;
+      }
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      header {
+        padding: 12px;
+        flex-wrap: wrap;
+      }
+      header small {
+        display: none;
+      }
+      #stage {
+        padding: 16px;
+      }
+      .files {
+        max-height: 130px;
+      }
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #f2f5f8;
+        --panel: #fff;
+        --line: #ccd6df;
+        --text: #213244;
+        --muted: #526579;
+        --accent: #285f8c;
+      }
+      button.primary {
+        color: white;
+      }
+      .error {
+        color: #963424 !important;
+      }
+    }
+  </style>
+  <header>
+    <strong>File Preview</strong
+    ><small>0.1.0 · Background visual evidence</small
+    ><button id="language" aria-label="Language / 语言">EN</button
+    ><button id="help" data-zh="怎么用" data-en="How to use">怎么用</button>
+  </header>
+  <main>
+    <aside>
+      <label for="sources" data-zh="授权文件来源" data-en="Authorized source"
+        >授权文件来源</label
+      ><select id="sources"></select
+      ><label
+        for="directory"
+        data-zh="项目相对目录"
+        data-en="Project-relative folder"
+        >项目相对目录</label
+      ><input id="directory" value="." />
+      <div class="row">
+        <button id="browse" data-zh="浏览" data-en="Browse">浏览</button
+        ><button id="parent" data-zh="上一级" data-en="Parent">上一级</button>
+      </div>
+      <div class="files" id="files"></div>
+      <label for="file" data-zh="文件相对路径" data-en="Relative file path"
+        >文件相对路径</label
+      ><input id="file" placeholder="docs/report.pdf" /><label
+        for="pages"
+        data-zh="页码（每次最多4页）"
+        data-en="Pages (up to 4 per call)"
+        >页码（每次最多4页）</label
+      ><input id="pages" value="1" placeholder="1,2,3" /><label for="dpi"
+        >DPI</label
+      ><select id="dpi">
+        <option>96</option>
+        <option selected>120</option>
+        <option>180</option></select
+      ><label
+        for="crop"
+        data-zh="局部放大（可选 x,y,宽,高；0–1）"
+        data-en="Crop (optional x,y,width,height; 0–1)"
+        >局部放大（可选 x,y,宽,高；0–1）</label
+      ><input id="crop" placeholder="0.5,0,0.5,0.5" /><button
+        class="primary"
+        id="render"
+        style="width: 100%; margin-top: 16px"
+        data-zh="后台渲染"
+        data-en="Render in background"
+      >
+        后台渲染
+      </button>
+      <p
+        class="hint"
+        data-zh="只读原文件。Office 按打印分页转换；页码不等于工作表编号。源文件变化后请重新渲染。"
+        data-en="Read-only originals. Office uses converted print pages; page numbers are not sheet numbers. Render again after source changes."
+      >
+        只读原文件。Office
+        按打印分页转换；页码不等于工作表编号。源文件变化后请重新渲染。
+      </p>
+    </aside>
+    <section id="stage">
+      <div id="status" role="status"></div>
+      <div id="intro">
+        <h1
+          data-zh="先看画面，再下结论"
+          data-en="Inspect the picture before drawing conclusions"
+        >
+          先看画面，再下结论
+        </h1>
+        <p
+          class="hint"
+          data-zh="选择文件和页码，后台生成可复查图片，无需打开桌面应用。支持 PDF、DOCX、PPTX、XLSX、图片、Markdown 和自包含 HTML。"
+          data-en="Choose a file and pages to render inspectable images without opening desktop apps. Supports PDF, DOCX, PPTX, XLSX, images, Markdown and self-contained HTML."
+        >
+          选择文件和页码，后台生成可复查图片，无需打开桌面应用。支持
+          PDF、DOCX、PPTX、XLSX、图片、Markdown 和自包含 HTML。
+        </p>
+        <p
+          class="hint"
+          data-zh="首次使用：点右上角“怎么用”配置独立渲染引擎。不会自动安装依赖或打开前台窗口。"
+          data-en="First run: open How to use to configure the separate renderer. No automatic dependency installation or foreground windows."
+        >
+          首次使用：点右上角“怎么用”配置独立渲染引擎。不会自动安装依赖或打开前台窗口。
+        </p>
+      </div>
+      <div id="metadata"></div>
+      <div class="pages" id="images"></div>
+    </section>
+  </main>
+  <dialog id="guide">
+    <button id="close" style="float: right" data-zh="关闭" data-en="Close">
+      关闭
+    </button>
+    <h1 data-zh="后台预览怎么用" data-en="Background preview setup">
+      后台预览怎么用
+    </h1>
+    <p
+      data-zh="1. 解压插件 ZIP，在根目录运行以下命令。需要 Docker Compose 和 Python 3；Windows 可使用命令提示符，无需 PowerShell。首次构建联网下载渲染依赖，预留约 3 GiB 磁盘和 1.5 GiB 运行内存。"
+      data-en="1. Extract the plugin ZIP and run these commands at its root. Requires Docker Compose and Python 3 (Windows Command Prompt works; no PowerShell). First build downloads dependencies; allow about 3 GiB disk and 1.5 GiB runtime memory."
+    >
+      1. 解压插件 ZIP，在根目录运行以下命令。需要 Docker Compose 和 Python
+      3；Windows 可使用命令提示符，无需
+      PowerShell。首次构建联网下载渲染依赖，预留约 3 GiB 磁盘和 1.5 GiB
+      运行内存。
+    </p>
+    <pre>
+python3 scripts/setup-engine.py
+docker compose -f engine/compose.yaml up --build -d</pre
+    >
+    <p
+      data-zh="Windows 的 Python 命令通常是 python。setup 只生成本地私有令牌文件，不会修改 Aide。将 .file-preview-engine.env 里的 FILE_PREVIEW_TOKEN 值填入插件设置的 Renderer token；不要发到聊天中。"
+      data-en="On Windows the Python command may be python. Setup only generates a private local token file. Copy FILE_PREVIEW_TOKEN from .file-preview-engine.env into plugin settings, never into chat."
+    >
+      Windows 的 Python 命令通常是 python。setup
+      只生成本地私有令牌文件，不会修改 Aide。将 .file-preview-engine.env 里的
+      FILE_PREVIEW_TOKEN 值填入插件设置的 Renderer token；不要发到聊天中。
+    </p>
+    <p>
+      Docker Desktop Aide: <code>http://host.docker.internal:18510</code
+      ><br />Native Aide: <code>http://127.0.0.1:18510</code>
+    </p>
+    <p
+      data-zh="2. 配好设置后重开工作台。选择已授权来源，浏览并选择文件；页码填 1 或 1,2，点后台渲染。下方会显示总页数、实际覆盖页、文件 SHA-256 和转换警告。"
+      data-en="2. Reopen the workbench after configuring settings. Choose an authorized source and file, enter pages such as 1 or 1,2 and render. Results show total pages, actual coverage, source SHA-256 and conversion warnings."
+    >
+      2. 配好设置后重开工作台。选择已授权来源，浏览并选择文件；页码填 1 或
+      1,2，点后台渲染。下方会显示总页数、实际覆盖页、文件 SHA-256 和转换警告。
+    </p>
+    <p
+      data-zh="3. 局部放大填比例坐标，例如 0.5,0,0.5,0.5 表示右上四分之一。生成图片不等于完成视觉复查；需要支持 plugin-tool-images-v1 的 Aide 和真实视觉模型，才能让 AI 看图。旧宿主只能显示工作台图片和文字元数据。"
+      data-en="3. Crop uses normalized coordinates: 0.5,0,0.5,0.5 is the top-right quarter. Producing images is not completed visual review: AI inspection requires plugin-tool-images-v1 and a vision model. Older hosts show workbench images and text metadata only."
+    >
+      3. 局部放大填比例坐标，例如 0.5,0,0.5,0.5
+      表示右上四分之一。生成图片不等于完成视觉复查；需要支持
+      plugin-tool-images-v1 的 Aide 和真实视觉模型，才能让 AI
+      看图。旧宿主只能显示工作台图片和文字元数据。
+    </p>
+    <p
+      data-zh="HTML/Markdown 按打印样式渲染，禁用脚本、外部链接和相对资源。Office 转换可能与微软原生排版不同。插件不会自动覆盖或修复原文件。停止独立引擎："
+      data-en="HTML/Markdown use print layout with scripts and external/relative resources blocked. Office conversion may differ from Microsoft Office. Original files are never automatically repaired or overwritten. Stop the renderer:"
+    >
+      HTML/Markdown 按打印样式渲染，禁用脚本、外部链接和相对资源。Office
+      转换可能与微软原生排版不同。插件不会自动覆盖或修复原文件。停止独立引擎：
+    </p>
+    <pre>docker compose -f engine/compose.yaml stop</pre>
+  </dialog>
+  <!--BRIDGE-->
+  <script>
+    const $ = (id) => document.getElementById(id),
+      client = AideWorkbenchClient.create("file-preview");
+    let lang = "zh",
+      epoch = 0;
+    const t = (z, e) => (lang === "zh" ? z : e);
+    const message = (s, bad = false) => {
+      $("status").textContent = s;
+      $("status").classList.toggle("error", bad);
+    };
+    function language() {
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+      document
+        .querySelectorAll("[data-zh]")
+        .forEach((e) => (e.textContent = e.dataset[lang]));
+      $("language").textContent = lang === "zh" ? "EN" : "中文";
+    }
+    $("language").onclick = () => {
+      lang = lang === "zh" ? "en" : "zh";
+      language();
+    };
+    $("help").onclick = () => $("guide").showModal();
+    $("close").onclick = () => $("guide").close();
+    async function call(tool, args = {}) {
+      const r = await client.call(tool, args);
+      if (!["ok", "result"].includes(r.status)) throw Error(r.error || r.status);
+      return r.result;
+    }
+    function clear() {
+      epoch++;
+      message(t("选择或参数已变化，请重新渲染。", "Selection or parameters changed. Render again."));
+      $("images").replaceChildren();
+      $("metadata").textContent = "";
+      $("intro").hidden = false;
+    }
+    $("sources").onchange = () => {
+      clear();
+      $("files").replaceChildren();
+      $("file").value = "";
+      $("directory").value = ".";
+    };
+    $("file").oninput = clear;
+    for (const id of ["pages", "dpi", "crop"]) $(id).oninput = clear;
+    $("browse").onclick = async () => {
+      const e = ++epoch;
+      try {
+        message(t("读取目录…", "Reading folder…"));
+        const r = await call("file_preview_browse", {
+          fileSource: $("sources").value,
+          path: $("directory").value || ".",
+        });
+        if (e !== epoch) return;
+        $("files").replaceChildren();
+        for (const item of r.entries || []) {
+          const b = document.createElement("button");
+          const p = item.path || item.name;
+          const dir = item.kind === "directory" || item.type === "directory";
+          b.textContent = (dir ? "▸ " : "") + p;
+          b.onclick = () => {
+            clear();
+            if (dir) {
+              $("directory").value = p;
+              $("browse").click();
+            } else $("file").value = p;
+          };
+          $("files").append(b);
+        }
+        message(t("选择文件后点后台渲染。", "Choose a file, then render."));
+      } catch (e) {
+        message(e.message, true);
+      }
+    };
+    $("parent").onclick = () => {
+      const p = $("directory").value.split("/");
+      p.pop();
+      $("directory").value = p.join("/") || ".";
+      $("browse").click();
+    };
+    $("render").onclick = async () => {
+      clear();
+      const e = epoch;
+      $("render").disabled = true;
+      try {
+        message(t("后台渲染中，请稍候…", "Rendering in background…"));
+        const args = {
+          fileSource: $("sources").value,
+          path: $("file").value,
+          pages: $("pages")
+            .value.split(",")
+            .map((x) => Number(x.trim())),
+          dpi: Number($("dpi").value),
+        };
+        if ($("crop").value.trim()) {
+          const c = $("crop").value.split(",").map(Number);
+          if (c.length !== 4)
+            throw Error(
+              t(
+                "放大区域需要4个比例坐标",
+                "Crop needs four normalized coordinates",
+              ),
+            );
+          args.crop = { x: c[0], y: c[1], width: c[2], height: c[3] };
+        }
+        const r = await call("file_preview_render", args);
+        if (e !== epoch) return;
+        $("intro").hidden = true;
+        $("metadata").textContent =
+          t("总页数：", "Total pages: ") +
+          r.totalPages +
+          t(" · 本次覆盖：", " · Covered: ") +
+          r.pagesRead.join(", ") +
+          (r.coverageComplete
+            ? t(" · 全部页", " · All pages")
+            : t(" · 部分页/区域", " · Partial pages/regions")) +
+          "\nSHA-256: " +
+          r.source.sha256 +
+          "\n" +
+          r.renderer +
+          "\n" +
+          r.warnings.join("\n");
+        for (const im of r.images) {
+          const f = document.createElement("figure"),
+            cap = document.createElement("figcaption"),
+            img = document.createElement("img");
+          cap.textContent =
+            t("第 ", "Page ") +
+            im.page +
+            " · " +
+            im.width +
+            " × " +
+            im.height +
+            (im.crop ? t(" · 局部", " · Crop") : "");
+          img.alt = cap.textContent;
+          img.src = "data:" + im.mediaType + ";base64," + im.dataBase64;
+          f.append(cap, img);
+          $("images").append(f);
+        }
+        message(
+          t(
+            "预览已生成。请查看图片；仅生成不代表视觉复查已完成。",
+            "Preview ready. Inspect the pictures; rendering alone is not completed visual review.",
+          ),
+        );
+      } catch (err) {
+        if (e === epoch) message(err.message, true);
+      } finally {
+        $("render").disabled = false;
+      }
+    };
+    client.onEvent((e) => {
+      if (e.event === "scope.revoked") {
+        clear();
+        message(
+          t(
+            "来源权限已变化，请重开工作台。",
+            "Source scope changed. Reopen the workbench.",
+          ),
+          true,
+        );
+      }
+    });
+    (async () => {
+      try {
+        await client.connect();
+        const r = await call("file_preview_sources");
+        $("sources").replaceChildren(
+          ...r.sources.map((s) => {
+            const o = document.createElement("option");
+            o.value = s.id;
+            o.textContent = s.name + " · " + s.type;
+            return o;
+          }),
+        );
+        const status = await call("file_preview_status");
+        message(
+          t("渲染引擎已就绪。", "Renderer ready.") +
+            " " +
+            status.hostImageResults,
+        );
+      } catch (e) {
+        message(e.message, true);
+      }
+    })();
+  </script>
+</html>

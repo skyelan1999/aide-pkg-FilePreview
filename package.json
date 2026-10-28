@@ -1,0 +1,13 @@
+{
+  "name": "aide-pkg-file-preview",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "build": "node scripts/build.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

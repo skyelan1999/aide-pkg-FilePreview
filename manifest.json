@@ -1,0 +1,38 @@
+{
+  "id": "file-preview",
+  "name": "File Preview · 文件预览",
+  "version": "0.1.0",
+  "main": "index.js",
+  "author": "skyelan1999",
+  "license": "MIT",
+  "description": "后台只读渲染 PDF、Office、图片、Markdown 与 HTML，按页取图和局部放大，用于视觉复查。渲染引擎独立部署。",
+  "workbench": {
+    "protocol": 1,
+    "entry": "viewer.html",
+    "title": "File Preview",
+    "tools": [
+      "file_preview_status",
+      "file_preview_sources",
+      "file_preview_browse",
+      "file_preview_render"
+    ]
+  },
+  "settingsSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "engineURL": {
+        "type": "string",
+        "title": "Renderer URL / 渲染服务",
+        "default": "http://host.docker.internal:18510",
+        "description": "从 Aide 后端可达的本地渲染服务地址；原生运行可填 http://127.0.0.1:18510"
+      },
+      "engineToken": {
+        "type": "string",
+        "title": "Renderer token / 渲染密钥",
+        "description": "运行 setup-engine.py 生成的本地服务令牌。不要填写在聊天或项目文件中。",
+        "format": "password"
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# File Preview
+Keep all renderer design, tests and delivery records in this public plugin repository. Only generic image-result transport belongs in Aide. Never commit user files, credentials, renderer tokens or private plugin implementations. Test only synthetic workspaces; do not deploy to 9999. Review archive allowlists before release. Preserve source identity, file hashes, actual page coverage and renderer warnings; image production is not proof of model inspection.

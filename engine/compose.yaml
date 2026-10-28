@@ -1,0 +1,40 @@
+name: aide-file-preview
+services:
+  renderer:
+    build:
+      context: ..
+      dockerfile: engine/Dockerfile
+    image: aide-file-preview:0.1.0
+    environment: {FILE_PREVIEW_INTERNAL: "1"}
+    read_only: true
+    tmpfs: ["/tmp:rw,nosuid,size=536870912,uid=10001,gid=10001,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1536m
+    cpus: 1.5
+    pids_limit: 256
+    init: true
+    restart: "no"
+    networks: [isolated]
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: "2"}
+  gateway:
+    image: aide-file-preview:0.1.0
+    entrypoint: ["python3", "/opt/file-preview/gateway.py"]
+    depends_on: [renderer]
+    env_file: ../.file-preview-engine.env
+    ports: ["127.0.0.1:18510:8765"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 32
+    init: true
+    restart: "no"
+    networks: [isolated, gateway]
+networks:
+  gateway: {}
+  isolated:
+    internal: true

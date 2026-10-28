@@ -1,0 +1,4 @@
+PyMuPDF==1.26.5
+Pillow==11.3.0
+playwright==1.55.0
+Markdown==3.9
